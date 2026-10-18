@@ -72,21 +72,16 @@ function SignupForm() {
       const supabase = createClient();
 
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: email.trim(),
+        password: password,
         options: {
-          data: isTeacher
-            ? {
-                role: "teacher",
-                full_name: full_name,
-                subject: subject,
-              }
-            : {
-                role: "student",
-                full_name: full_name,
-                roll_number: roll_number,
-                class_name: class_name,
-              },
+          data: {
+            role: role, // 'student' or 'teacher'
+            full_name: full_name,
+            class_name: class_name || null,
+            roll_number: roll_number || null,
+            subject: subject || null,
+          },
         },
       });
 
@@ -101,7 +96,7 @@ function SignupForm() {
         try {
           await registerProfileSyncAction({
             userId: data.user.id,
-            email,
+            email: email.trim(),
             role,
             full_name,
             roll_number,
@@ -113,7 +108,26 @@ function SignupForm() {
         }
       }
 
-      // Successful registration: redirect to login with role and registered=true status
+      // Check if session was returned directly
+      if (data?.session) {
+        router.push(`/${role}`);
+        router.refresh();
+        return;
+      }
+
+      // Immediate auto-login so user does not need to manually enter credentials
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      });
+
+      if (!signInErr && signInData?.session) {
+        router.push(`/${role}`);
+        router.refresh();
+        return;
+      }
+
+      // If instant login was blocked (e.g. email verification required), redirect to login with registered badge
       router.push(`/login?role=${role}&registered=true`);
     } catch (err: any) {
       console.error("Registration error:", err);

@@ -18,10 +18,12 @@ function LoginForm() {
     setBusy(true);
     setErr("");
     const f = new FormData(e.currentTarget);
+    const email = String(f.get("email") ?? "").trim();
+    const password = String(f.get("password") ?? "");
     const sb = createClient();
     const { data, error } = await sb.auth.signInWithPassword({
-      email: String(f.get("email")),
-      password: String(f.get("password")),
+      email,
+      password,
     });
 
     if (error) {
