@@ -34,11 +34,14 @@ function LoginForm() {
       .from("profiles")
       .select("role")
       .eq("id", data.user.id)
-      .single();
+      .maybeSingle();
 
-    if (p?.role !== role) {
+    const actualRole = (p?.role || data.user.user_metadata?.role || "student").toString().toLowerCase();
+    const expectedRole = role.toLowerCase();
+
+    if (actualRole !== expectedRole) {
       await sb.auth.signOut();
-      setErr(`Access Denied: This account is registered as a ${p?.role || "different"} account, not ${role}.`);
+      setErr(`Access Denied: This account is registered as a ${p?.role || data.user.user_metadata?.role || "different"} account, not ${role}.`);
       setBusy(false);
       return;
     }

@@ -68,46 +68,69 @@ function SignupForm() {
       return;
     }
 
-    const userMeta = isTeacher
-      ? { role: "teacher", full_name, subject }
-      : { role: "student", full_name, roll_number, class_name };
-
-    const sb = createClient();
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password,
-      options: {
-        data: userMeta,
-      },
-    });
-
-    if (error) {
-      setErr(error.message);
-      setBusy(false);
-      return;
-    }
-
-    // Sync into public.profiles table to guarantee role and fields are set
     try {
-      await registerProfileSyncAction({
-        userId: data.user?.id,
-        email,
-        role,
-        full_name,
-        roll_number,
-        class_name,
-        subject,
-      });
-    } catch (syncErr) {
-      console.warn("Profile sync notice:", syncErr);
-    }
+      const supabase = createClient();
 
-    if (data.session) {
-      router.push(`/${role}`);
-      router.refresh();
-    } else {
-      // Redirect to login page with role and success flag
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: isTeacher
+            ? {
+                role: "teacher",
+                full_name: full_name,
+                subject: subject,
+              }
+            : {
+                role: "student",
+                full_name: full_name,
+                roll_number: roll_number,
+                class_name: class_name,
+              },
+        },
+      });
+
+      if (error) {
+        setErr(error.message || "Registration error occurred. Please try again.");
+        setBusy(false);
+        return;
+      }
+
+      // Gracefully sync into public.profiles in background
+      if (data?.user?.id) {
+        try {
+          await registerProfileSyncAction({
+            userId: data.user.id,
+            email,
+            role,
+            full_name,
+            roll_number,
+            class_name,
+            subject,
+          });
+        } catch (syncErr: any) {
+          console.warn("Background profile sync notice:", syncErr?.message || syncErr);
+        }
+      }
+
+      // Successful registration: redirect to login with role and registered=true status
       router.push(`/login?role=${role}&registered=true`);
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      // Display exact error message (e.g. error.message)
+      const exactMsg =
+        err?.message ||
+        err?.error_description ||
+        (typeof err === "string" ? err : "Failed to register account.");
+
+      if (exactMsg.toLowerCase().includes("failed to fetch")) {
+        setErr(
+          "Network error (Failed to fetch): Supabase host is unreachable or .env.local was updated. Please restart your dev server (Ctrl+C then npm run dev) so the new Supabase credentials take effect."
+        );
+      } else {
+        setErr(exactMsg);
+      }
+      setBusy(false);
     }
   }
 

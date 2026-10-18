@@ -356,29 +356,47 @@ export async function registerProfileSyncAction(payload: {
   class_name?: string | null;
   subject?: string | null;
 }) {
-  const admin = createAdmin();
-  let uid = payload.userId;
-  if (!uid) {
+  try {
+    const admin = createAdmin();
+    let uid = payload.userId;
+    if (!uid) {
+      try {
+        const { data: usersData } = await admin.auth.admin.listUsers();
+        const found = usersData?.users?.find(
+          (u) => u.email?.toLowerCase() === payload.email.toLowerCase()
+        );
+        uid = found?.id;
+      } catch {}
+    }
+    if (!uid) return { success: false };
+
+    const isTeacher = payload.role === "teacher";
+    
+    // Attempt inserting with all available fields first
     try {
-      const { data: usersData } = await admin.auth.admin.listUsers();
-      const found = usersData?.users?.find(
-        (u) => u.email?.toLowerCase() === payload.email.toLowerCase()
-      );
-      uid = found?.id;
+      const { error: fullErr } = await admin.from("profiles").upsert({
+        id: uid,
+        full_name: payload.full_name,
+        email: payload.email,
+        role: payload.role,
+        roll_number: isTeacher ? null : (payload.roll_number || null),
+        class_name: isTeacher ? (payload.subject || null) : (payload.class_name || null),
+      });
+      if (!fullErr) return { success: true };
     } catch {}
+
+    // Fallback inserting basic fields if extended columns don't exist
+    const { error: basicErr } = await admin.from("profiles").upsert({
+      id: uid,
+      full_name: payload.full_name,
+      email: payload.email,
+      role: payload.role,
+    });
+
+    return { success: !basicErr };
+  } catch (err: any) {
+    console.warn("registerProfileSyncAction non-fatal error:", err?.message || err);
+    return { success: false, error: err?.message || "Profile sync error" };
   }
-  if (!uid) return { success: false };
-
-  const isTeacher = payload.role === "teacher";
-  const { error } = await admin.from("profiles").upsert({
-    id: uid,
-    full_name: payload.full_name,
-    email: payload.email,
-    role: payload.role,
-    roll_number: isTeacher ? null : (payload.roll_number || null),
-    class_name: isTeacher ? (payload.subject || null) : (payload.class_name || null),
-  });
-
-  return { success: !error };
 }
 
