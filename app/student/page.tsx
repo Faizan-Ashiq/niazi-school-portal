@@ -7,6 +7,8 @@ export const dynamic = "force-dynamic";
 export default async function StudentPage() {
   const { sb, profile } = await requireRole(["student"]);
 
+  const studentClass = profile.class_name?.trim();
+
   const [announcementsRes, homeworkRes, papersRes, settingsRes] = await Promise.all([
     sb
       .from("announcements")
@@ -14,18 +16,19 @@ export default async function StudentPage() {
       .in("target_audience", ["all", "students"])
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false }),
-    profile.class_name
+    studentClass
       ? sb
           .from("diary_homework")
           .select("*")
-          .eq("class_name", profile.class_name)
+          .ilike("class_name", studentClass)
           .order("date", { ascending: false })
+          .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    profile.class_name
+    studentClass
       ? sb
           .from("past_papers")
           .select("*")
-          .eq("class_name", profile.class_name)
+          .ilike("class_name", studentClass)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
     sb.from("school_settings").select("*").limit(1).maybeSingle(),

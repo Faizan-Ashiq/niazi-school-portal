@@ -25,6 +25,8 @@ export default async function TeacherPage() {
     sb
       .from("diary_homework")
       .select("*")
+      .eq("created_by", profile.id)
+      .order("created_at", { ascending: false })
       .order("date", { ascending: false }),
     sb
       .from("past_papers")

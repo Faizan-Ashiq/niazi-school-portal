@@ -313,8 +313,8 @@ export function TeacherHomeworkList({ homeworks }: { homeworks: DiaryHomework[] 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Recently Posted Homework</h3>
-          <p className="text-xs text-slate-500">Live diary entries active on student portals</p>
+          <h3 className="text-lg font-bold text-slate-900 tracking-tight">Your Uploaded Homework</h3>
+          <p className="text-xs text-slate-500">Live diary entries assigned by your teacher account</p>
         </div>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
           {homeworks.length} {homeworks.length === 1 ? "Assignment" : "Assignments"}
@@ -326,8 +326,8 @@ export function TeacherHomeworkList({ homeworks }: { homeworks: DiaryHomework[] 
           <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400 mb-2">
             <BookOpen className="w-5 h-5" />
           </div>
-          <p className="text-sm font-semibold text-slate-700">No Homework Posted Yet</p>
-          <p className="text-xs text-slate-400">Use the form above to assign homework to your class.</p>
+          <p className="text-sm font-semibold text-slate-700">No Homework Posted by You Yet</p>
+          <p className="text-xs text-slate-400">Use the form above to assign homework to your designated class.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

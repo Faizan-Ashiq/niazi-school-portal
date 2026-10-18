@@ -207,6 +207,23 @@ export async function deleteHomeworkAction(f: FormData) {
   const id = s(f, "id");
   const attachment_url = s(f, "url");
 
+  if (!id) return;
+
+  const admin = createAdmin();
+
+  // If caller is a teacher, verify they created this assignment
+  if (profile.role === "teacher") {
+    const { data: existing } = await admin
+      .from("diary_homework")
+      .select("id, created_by")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existing && existing.created_by && existing.created_by !== profile.id) {
+      throw new Error("Access Denied: Teachers are only authorized to delete their own homework assignments.");
+    }
+  }
+
   if (attachment_url) {
     const isSchoolAssets = attachment_url.includes("/school-assets/");
     const isFiles = attachment_url.includes("/files/");
@@ -218,12 +235,17 @@ export async function deleteHomeworkAction(f: FormData) {
     const bucket = isSchoolAssets ? "school-assets" : "files";
     if (path) {
       try {
-        await createAdmin().storage.from(bucket).remove([decodeURIComponent(path)]);
+        await admin.storage.from(bucket).remove([decodeURIComponent(path)]);
       } catch {}
     }
   }
 
-  await createAdmin().from("diary_homework").delete().eq("id", id);
+  if (profile.role === "teacher") {
+    await admin.from("diary_homework").delete().eq("id", id).eq("created_by", profile.id);
+  } else {
+    // Principal has administrative full delete access
+    await admin.from("diary_homework").delete().eq("id", id);
+  }
 
   revalidatePath("/", "layout");
   revalidatePath("/principal");

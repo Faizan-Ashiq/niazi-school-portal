@@ -10,6 +10,7 @@ import {
   deletePaperAction,
   deleteStudentAction,
   saveSettingsAction,
+  deleteHomeworkAction,
 } from "@/app/actions";
 import {
   UserPlus,
@@ -32,8 +33,13 @@ import {
   Mail,
   GraduationCap,
   Sparkles,
+  BookOpen,
+  UserCheck,
+  Paperclip,
+  Search,
+  Filter,
 } from "lucide-react";
-import { Profile, Announcement, PastPaper, SchoolSettings } from "@/lib/types";
+import { Profile, Announcement, PastPaper, SchoolSettings, DiaryHomework } from "@/lib/types";
 
 // ==========================================
 // 1. ADD STUDENT FORM
@@ -879,6 +885,232 @@ export function PrincipalPapersList({ papers }: { papers: PastPaper[] }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ==========================================
+// 8. PRINCIPAL HOMEWORK MONITORING & LIST
+// ==========================================
+export function PrincipalHomeworkList({
+  homeworks,
+  teachers = [],
+}: {
+  homeworks: DiaryHomework[];
+  teachers?: { id: string; full_name?: string | null; email?: string }[];
+}) {
+  const [selectedClass, setSelectedClass] = useState<string>("all");
+  const [selectedTeacher, setSelectedTeacher] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isPending, startTransition] = useTransition();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Extract unique classes
+  const classes = Array.from(new Set(homeworks.map((h) => h.class_name).filter(Boolean))).sort();
+
+  // Map teacher ID to display name
+  const teacherMap = new Map(teachers.map((t) => [t.id, t.full_name || t.email || "Faculty Teacher"]));
+
+  // Filter homeworks
+  const filtered = homeworks.filter((hw) => {
+    if (selectedClass !== "all" && hw.class_name.toLowerCase() !== selectedClass.toLowerCase()) {
+      return false;
+    }
+    if (selectedTeacher !== "all" && hw.created_by !== selectedTeacher) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchSubject = hw.subject?.toLowerCase().includes(q);
+      const matchDesc = hw.description?.toLowerCase().includes(q);
+      const matchTeacher = hw.created_by && teacherMap.get(hw.created_by)?.toLowerCase().includes(q);
+      if (!matchSubject && !matchDesc && !matchTeacher) return false;
+    }
+    return true;
+  });
+
+  const handleDelete = (id: string, url?: string | null, subject?: string) => {
+    if (!confirm(`Are you sure you want to delete this homework assignment (${subject || "assignment"}) as Principal?`)) return;
+    setDeletingId(id);
+    const formData = new FormData();
+    formData.append("id", id);
+    if (url) formData.append("url", url);
+
+    startTransition(async () => {
+      try {
+        await deleteHomeworkAction(formData);
+      } catch (err: any) {
+        alert(err.message || "Failed to delete homework.");
+      } finally {
+        setDeletingId(null);
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                School-Wide Homework & Diary Supervision
+              </h3>
+              <p className="text-xs text-slate-500">
+                Full principal access across all grade levels and teachers
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+            {filtered.length} of {homeworks.length} Assignments
+          </span>
+        </div>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Class Filter */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+            Filter by Class
+          </label>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="input py-2 text-xs"
+          >
+            <option value="all">All Classes ({classes.length})</option>
+            {classes.map((c) => (
+              <option key={c} value={c}>
+                Class {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Teacher Filter */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+            Filter by Teacher
+          </label>
+          <select
+            value={selectedTeacher}
+            onChange={(e) => setSelectedTeacher(e.target.value)}
+            className="input py-2 text-xs"
+          >
+            <option value="all">All Teachers ({teachers.length})</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.full_name || t.email}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search Input */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+            Search Subject / Content
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="e.g. Mathematics, Chapter 3..."
+              className="input py-2 pl-8 text-xs"
+            />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Homework Grid */}
+      {!filtered.length ? (
+        <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
+          <BookOpen className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+          <p className="text-sm font-semibold text-slate-600">No Homework Matches Found</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Try adjusting your class or teacher filters above.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map((hw) => {
+            const authorName = hw.created_by
+              ? teacherMap.get(hw.created_by) || "Teacher (" + hw.created_by.slice(0, 6) + ")"
+              : "Staff";
+
+            return (
+              <div
+                key={hw.id}
+                className="bg-white border border-slate-200 hover:border-indigo-300 transition p-5 rounded-2xl shadow-sm flex flex-col justify-between space-y-3"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-bold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100">
+                        {hw.subject}
+                      </span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                        Class: {hw.class_name}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md">
+                      <Calendar className="w-3 h-3" />
+                      {hw.date}
+                    </span>
+                  </div>
+
+                  <div className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100/70 px-2.5 py-1 rounded-lg">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Teacher: <strong className="text-slate-800">{authorName}</strong></span>
+                  </div>
+
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-normal">
+                    {hw.description}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  {hw.attachment_url ? (
+                    <a
+                      href={hw.attachment_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 font-semibold text-indigo-600 hover:underline"
+                    >
+                      <Paperclip className="w-3.5 h-3.5" />
+                      <span>Attachment</span>
+                    </a>
+                  ) : (
+                    <span className="text-slate-400">No file</span>
+                  )}
+
+                  <button
+                    onClick={() => handleDelete(hw.id, hw.attachment_url, hw.subject)}
+                    disabled={isPending && deletingId === hw.id}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 rounded-lg transition active:scale-95 disabled:opacity-50"
+                  >
+                    {isPending && deletingId === hw.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>Delete</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

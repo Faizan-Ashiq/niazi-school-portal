@@ -29,6 +29,8 @@ export interface DiaryHomework {
   date: string;
   attachment_url?: string | null;
   created_by?: string | null;
+  teacher_id?: string | null;
+  teacher_name?: string | null;
   created_at?: string;
 }
 

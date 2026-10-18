@@ -22,10 +22,19 @@ export default async function StudentDetail({ params }: { params: { id: string }
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false }),
     s.class_name
-      ? sb.from("diary_homework").select("*").eq("class_name", s.class_name).order("date", { ascending: false })
+      ? sb
+          .from("diary_homework")
+          .select("*")
+          .ilike("class_name", s.class_name.trim())
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
     s.class_name
-      ? sb.from("past_papers").select("*").eq("class_name", s.class_name).order("created_at", { ascending: false })
+      ? sb
+          .from("past_papers")
+          .select("*")
+          .ilike("class_name", s.class_name.trim())
+          .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
     sb.from("school_settings").select("*").limit(1).maybeSingle(),
   ]);
