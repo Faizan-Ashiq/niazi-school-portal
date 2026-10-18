@@ -70,11 +70,11 @@ export default async function Home() {
   }
 
   // Fallback defaults if not set in database
-  const rawYt = settings?.youtube_url || "https://youtube.com/@SchoolChannel";
+  const rawYt = settings?.youtube_url || "https://youtube.com/@niazirehnuma";
   const youtubeUrl = rawYt.startsWith("http") ? rawYt : `https://${rawYt}`;
-  const whatsappNum = settings?.whatsapp_number || "+923001234567";
-  const contactEmail = settings?.contact_email || "info@school.com";
-  const cleanPhone = whatsappNum.replace(/\D/g, "");
+  const whatsappNum = settings?.whatsapp_number || "+92 348 6868167";
+  const contactEmail = settings?.contact_email || "niaziacademies@gmail.com";
+  const cleanPhone = (whatsappNum ? whatsappNum.replace(/\D/g, "") : "") || "923486868167";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 font-sans flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -305,11 +305,11 @@ export default async function Home() {
             <span>NIAZI REHNUMA · 25 Years of Academic Excellence</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition">YouTube</a>
+            <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="hover:text-red-600 transition font-medium">YouTube</a>
             <span>•</span>
-            <a href={`https://wa.me/${cleanPhone}`} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition">WhatsApp</a>
+            <a href={`https://wa.me/${cleanPhone}`} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 transition font-medium">WhatsApp (+92 348 6868167)</a>
             <span>•</span>
-            <a href={`mailto:${contactEmail}`} className="hover:text-slate-900 transition">{contactEmail}</a>
+            <a href={`mailto:${contactEmail}`} className="hover:text-indigo-600 transition font-medium">{contactEmail}</a>
           </div>
         </div>
       </footer>

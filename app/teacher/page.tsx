@@ -7,15 +7,15 @@ import {
   TeacherHomeworkList,
   TeacherPapersList,
 } from "@/components/TeacherForms";
-import { BookOpen, FileText, Megaphone, Sparkles, GraduationCap } from "lucide-react";
-import { Announcement, DiaryHomework, PastPaper } from "@/lib/types";
+import { BookOpen, FileText, Megaphone, Sparkles, Youtube, MessageCircle, Mail, ExternalLink } from "lucide-react";
+import { Announcement, DiaryHomework, PastPaper, SchoolSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeacherPage() {
   const { sb, profile } = await requireRole(["teacher"]);
 
-  const [announcementsRes, homeworkRes, papersRes] = await Promise.all([
+  const [announcementsRes, homeworkRes, papersRes, settingsRes] = await Promise.all([
     sb
       .from("announcements")
       .select("*")
@@ -30,11 +30,19 @@ export default async function TeacherPage() {
       .from("past_papers")
       .select("*")
       .order("created_at", { ascending: false }),
+    sb.from("school_settings").select("*").limit(1).maybeSingle(),
   ]);
 
   const announcements: Announcement[] = announcementsRes.data ?? [];
   const homeworks: DiaryHomework[] = homeworkRes.data ?? [];
   const papers: PastPaper[] = papersRes.data ?? [];
+  const settings: SchoolSettings | null = settingsRes?.data ?? null;
+
+  const whatsappNum = settings?.whatsapp_number || "+92 348 6868167";
+  const cleanPhone = (whatsappNum ? whatsappNum.replace(/\D/g, "") : "") || "923486868167";
+  const rawYt = settings?.youtube_url || "https://youtube.com/@niazirehnuma";
+  const ytUrl = rawYt.startsWith("http") ? rawYt : `https://${rawYt}`;
+  const contactEmail = settings?.contact_email || "niaziacademies@gmail.com";
 
   return (
     <Shell
@@ -94,6 +102,55 @@ export default async function TeacherPage() {
               </div>
               <p className="text-2xl font-black text-slate-900">{announcements.length}</p>
               <p className="text-[11px] text-slate-400">Active faculty circulars</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Socials & Official Connect Section */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <h3 className="font-bold text-slate-800 text-base tracking-tight">Connect with School & Official Channels</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">Official video lectures, live helpdesk, and administration support</p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href={ytUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200/80 transition-all duration-200 shadow-sm active:scale-95"
+              >
+                <div className="p-1 bg-red-600 text-white rounded-lg group-hover:bg-white group-hover:text-red-600 transition-colors">
+                  <Youtube className="w-4 h-4" />
+                </div>
+                <span>YouTube Channel</span>
+                <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+              </a>
+
+              <a
+                href={`https://wa.me/${cleanPhone}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200/80 transition-all duration-200 shadow-sm active:scale-95"
+              >
+                <div className="p-1 bg-emerald-600 text-white rounded-lg group-hover:bg-white group-hover:text-emerald-600 transition-colors">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <span>WhatsApp Official</span>
+                <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+              </a>
+
+              <a
+                href={`mailto:${contactEmail}`}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200/90 border border-slate-200 transition-all duration-200 shadow-sm active:scale-95"
+              >
+                <Mail className="w-4 h-4 text-slate-600" />
+                <span>{contactEmail}</span>
+              </a>
             </div>
           </div>
         </div>

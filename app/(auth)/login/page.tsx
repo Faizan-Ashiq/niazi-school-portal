@@ -3,11 +3,12 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { School, ArrowLeft, Lock, Mail, AlertCircle, Loader2 } from "lucide-react";
+import { School, ArrowLeft, Lock, Mail, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const role = searchParams.get("role") ?? "student";
+  const registered = searchParams.get("registered") === "true";
   const router = useRouter();
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -96,6 +97,15 @@ function LoginForm() {
             </div>
           </div>
 
+          {registered && (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center gap-2.5 shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>
+                Account registered successfully! Please sign in with your credentials.
+              </span>
+            </div>
+          )}
+
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -157,8 +167,17 @@ function LoginForm() {
           {role === "student" && (
             <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
               New student?{" "}
-              <Link href="/signup" className="font-bold text-indigo-600 hover:underline">
+              <Link href="/signup?role=student" className="font-bold text-indigo-600 hover:underline">
                 Register an account
+              </Link>
+            </div>
+          )}
+
+          {role === "teacher" && (
+            <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
+              Need an account?{" "}
+              <Link href="/signup?role=teacher" className="font-bold text-emerald-600 hover:underline">
+                Register as Teacher
               </Link>
             </div>
           )}

@@ -1,35 +1,83 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { School, ArrowLeft, AlertCircle, Loader2, User, BookOpen, Award, Mail, Lock } from "lucide-react";
+import { registerProfileSyncAction } from "@/app/actions";
+import {
+  ArrowLeft,
+  AlertCircle,
+  Loader2,
+  User,
+  BookOpen,
+  Award,
+  Mail,
+  Lock,
+  GraduationCap,
+  Briefcase,
+  CheckCircle2,
+} from "lucide-react";
 
-export default function Signup() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const roleParam = searchParams.get("role");
+  
+  const [role, setRole] = useState<"student" | "teacher">(
+    roleParam === "teacher" ? "teacher" : "student"
+  );
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (roleParam === "teacher" || roleParam === "student") {
+      setRole(roleParam);
+    }
+  }, [roleParam]);
+
+  const isTeacher = role === "teacher";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
     setErr("");
+
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const full_name = String(formData.get("full_name") ?? "").trim();
-    const roll_number = String(formData.get("roll_number") ?? "").trim();
-    const class_name = String(formData.get("class_name") ?? "").trim();
+    const roll_number = isTeacher ? null : String(formData.get("roll_number") ?? "").trim();
+    const class_name = isTeacher ? null : String(formData.get("class_name") ?? "").trim();
+    const subject = isTeacher ? String(formData.get("subject") ?? "").trim() : null;
 
-    const { data, error } = await createClient().auth.signUp({
+    if (!full_name) {
+      setErr("Full Name is required.");
+      setBusy(false);
+      return;
+    }
+
+    if (isTeacher && !subject) {
+      setErr("Subject / Specialization is required for teacher registration.");
+      setBusy(false);
+      return;
+    }
+
+    if (!isTeacher && (!class_name || !roll_number)) {
+      setErr("Class name and roll number are required for student registration.");
+      setBusy(false);
+      return;
+    }
+
+    const userMeta = isTeacher
+      ? { role: "teacher", full_name, subject }
+      : { role: "student", full_name, roll_number, class_name };
+
+    const sb = createClient();
+    const { data, error } = await sb.auth.signUp({
       email,
       password,
       options: {
-        data: {
-          full_name,
-          roll_number,
-          class_name,
-        },
+        data: userMeta,
       },
     });
 
@@ -39,14 +87,28 @@ export default function Signup() {
       return;
     }
 
-    if (!data.session) {
-      setErr("Account registered! Check your email to confirm verification, then proceed to sign in.");
-      setBusy(false);
-      return;
+    // Sync into public.profiles table to guarantee role and fields are set
+    try {
+      await registerProfileSyncAction({
+        userId: data.user?.id,
+        email,
+        role,
+        full_name,
+        roll_number,
+        class_name,
+        subject,
+      });
+    } catch (syncErr) {
+      console.warn("Profile sync notice:", syncErr);
     }
 
-    router.push("/student");
-    router.refresh();
+    if (data.session) {
+      router.push(`/${role}`);
+      router.refresh();
+    } else {
+      // Redirect to login page with role and success flag
+      router.push(`/login?role=${role}&registered=true`);
+    }
   }
 
   return (
@@ -77,17 +139,63 @@ export default function Signup() {
               <span className="text-xs font-bold text-indigo-600 block uppercase tracking-wider">
                 NIAZI REHNUMA
               </span>
-              <span className="inline-block px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 mt-1">
-                Student Registration
+              <span
+                className={`inline-block px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider mt-1 border transition-colors ${
+                  isTeacher
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-blue-50 text-blue-700 border-blue-200"
+                }`}
+              >
+                {isTeacher ? "Teacher Registration" : "Student Registration"}
               </span>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-2">
-                Create Student Account
+                {isTeacher ? "Create Teacher Account" : "Create Student Account"}
               </h1>
-              <p className="text-xs text-slate-500">Register your profile to access class homework & tests</p>
+              <p className="text-xs text-slate-500">
+                {isTeacher
+                  ? "Register your faculty profile to post daily homework & examination tests"
+                  : "Register your profile to access class homework & tests"}
+              </p>
             </div>
           </div>
 
+          {/* Account Role Switcher */}
+          <div className="grid grid-cols-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/80">
+            <button
+              type="button"
+              onClick={() => {
+                setRole("student");
+                setErr("");
+              }}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+                !isTeacher
+                  ? "bg-white text-indigo-700 shadow-sm border border-slate-200/60"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <GraduationCap className={`w-4 h-4 ${!isTeacher ? "text-indigo-600" : "text-slate-400"}`} />
+              <span>Student Account</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRole("teacher");
+                setErr("");
+              }}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
+                isTeacher
+                  ? "bg-white text-emerald-700 shadow-sm border border-slate-200/60"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <BookOpen className={`w-4 h-4 ${isTeacher ? "text-emerald-600" : "text-slate-400"}`} />
+              <span>Teacher Account</span>
+            </button>
+          </div>
+
           <form onSubmit={onSubmit} className="space-y-4">
+            {/* Full Name */}
             <div className="space-y-1">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Full Name
@@ -97,47 +205,70 @@ export default function Signup() {
                   name="full_name"
                   type="text"
                   required
-                  placeholder="e.g. Ayaan Khan"
+                  placeholder={isTeacher ? "e.g. Sir Asim Niazi" : "e.g. Ayaan Khan"}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 pl-10 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
                 />
                 <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
+            {/* Teacher Specific: Subject / Specialization */}
+            {isTeacher && (
+              <div className="space-y-1 animate-fadeIn">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Class (e.g. 8-A, 10-B)
+                  Subject / Specialization
                 </label>
                 <div className="relative">
                   <input
-                    name="class_name"
+                    name="subject"
                     type="text"
                     required
-                    placeholder="Class Name"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 pl-10 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    placeholder="e.g. Mathematics, English, Science"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 pl-10 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   />
-                  <BookOpen className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                 </div>
               </div>
+            )}
 
-              <div className="space-y-1">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Roll Number
-                </label>
-                <div className="relative">
-                  <input
-                    name="roll_number"
-                    type="text"
-                    required
-                    placeholder="Roll No"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 pl-10 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  />
-                  <Award className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            {/* Student Specific: Class & Roll Number */}
+            {!isTeacher && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Class (e.g. 8-A, 10-B)
+                  </label>
+                  <div className="relative">
+                    <input
+                      name="class_name"
+                      type="text"
+                      required={!isTeacher}
+                      placeholder="Class Name"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 pl-10 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    />
+                    <BookOpen className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Roll Number
+                  </label>
+                  <div className="relative">
+                    <input
+                      name="roll_number"
+                      type="text"
+                      required={!isTeacher}
+                      placeholder="Roll No"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 pl-10 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    />
+                    <Award className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
+            {/* Email Address */}
             <div className="space-y-1">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Email Address
@@ -147,13 +278,14 @@ export default function Signup() {
                   name="email"
                   type="email"
                   required
-                  placeholder="student@example.com"
+                  placeholder={isTeacher ? "teacher@example.com" : "student@example.com"}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 pl-10 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600"
                 />
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
               </div>
             </div>
 
+            {/* Password */}
             <div className="space-y-1">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Password (min 6 characters)
@@ -181,7 +313,11 @@ export default function Signup() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-indigo-500/20 hover:bg-indigo-700 transition active:scale-95 disabled:opacity-50"
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-95 disabled:opacity-50 ${
+                isTeacher
+                  ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+                  : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
+              }`}
             >
               {busy ? (
                 <>
@@ -189,14 +325,19 @@ export default function Signup() {
                   <span>Registering...</span>
                 </>
               ) : (
-                <span>Complete Registration</span>
+                <span>{isTeacher ? "Register Teacher Account" : "Register Student Account"}</span>
               )}
             </button>
           </form>
 
           <div className="pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
             Already registered?{" "}
-            <Link href="/login?role=student" className="font-bold text-indigo-600 hover:underline">
+            <Link
+              href={isTeacher ? "/login?role=teacher" : "/login?role=student"}
+              className={`font-bold hover:underline ${
+                isTeacher ? "text-emerald-600" : "text-indigo-600"
+              }`}
+            >
               Sign In here
             </Link>
           </div>
@@ -204,5 +345,13 @@ export default function Signup() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

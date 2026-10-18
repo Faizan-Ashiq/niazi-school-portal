@@ -483,8 +483,8 @@ export function SchoolSettingsForm({ settings }: { settings: SchoolSettings | nu
           </label>
           <input
             name="youtube_url"
-            defaultValue={settings?.youtube_url ?? "https://youtube.com/@SchoolChannel"}
-            placeholder="https://youtube.com/@channel"
+            defaultValue={settings?.youtube_url ?? "https://youtube.com/@niazirehnuma"}
+            placeholder="https://youtube.com/@niazirehnuma"
             className="input"
             disabled={isPending}
           />
@@ -497,8 +497,8 @@ export function SchoolSettingsForm({ settings }: { settings: SchoolSettings | nu
           </label>
           <input
             name="whatsapp_number"
-            defaultValue={settings?.whatsapp_number ?? "+923001234567"}
-            placeholder="+923001234567"
+            defaultValue={settings?.whatsapp_number ?? "+92 348 6868167"}
+            placeholder="+92 348 6868167"
             className="input"
             disabled={isPending}
           />
@@ -512,8 +512,8 @@ export function SchoolSettingsForm({ settings }: { settings: SchoolSettings | nu
           <input
             name="contact_email"
             type="email"
-            defaultValue={settings?.contact_email ?? "info@school.com"}
-            placeholder="info@school.com"
+            defaultValue={settings?.contact_email ?? "niaziacademies@gmail.com"}
+            placeholder="niaziacademies@gmail.com"
             className="input"
             disabled={isPending}
           />

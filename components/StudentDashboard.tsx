@@ -17,16 +17,16 @@ export default function StudentDashboard({
   settings?: SchoolSettings | null;
 }) {
   // Format WhatsApp number strictly to digits only for international wa.me links
-  const cleanPhone = settings?.whatsapp_number ? settings.whatsapp_number.replace(/\D/g, '') : '';
+  const whatsappNum = settings?.whatsapp_number || '+92 348 6868167';
+  const cleanPhone = (whatsappNum ? whatsappNum.replace(/\D/g, '') : '') || '923486868167';
   
   // Format YouTube URL to ensure protocol prefix
-  const ytUrl = settings?.youtube_url
-    ? settings.youtube_url.startsWith('http')
-      ? settings.youtube_url
-      : `https://${settings.youtube_url}`
-    : '';
+  const rawYt = settings?.youtube_url || 'https://youtube.com/@niazirehnuma';
+  const ytUrl = rawYt.startsWith('http') ? rawYt : `https://${rawYt}`;
 
-  const hasSocials = Boolean(ytUrl || cleanPhone || settings?.contact_email);
+  const contactEmail = settings?.contact_email || 'niaziacademies@gmail.com';
+
+  const hasSocials = Boolean(ytUrl || cleanPhone || contactEmail);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
@@ -114,13 +114,13 @@ export default function StudentDashboard({
               </a>
             )}
 
-            {settings?.contact_email && (
+            {contactEmail && (
               <a
-                href={`mailto:${settings.contact_email}`}
+                href={`mailto:${contactEmail}`}
                 className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200/90 border border-slate-200 transition-all duration-200 shadow-sm active:scale-95"
               >
                 <Mail className="w-4 h-4 text-slate-600" />
-                <span>{settings.contact_email}</span>
+                <span>{contactEmail}</span>
               </a>
             )}
 

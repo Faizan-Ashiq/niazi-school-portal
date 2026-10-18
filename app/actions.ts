@@ -256,6 +256,7 @@ export async function updateSettingsAction(f: FormData) {
   revalidatePath("/", "layout");
   revalidatePath("/principal");
   revalidatePath("/student");
+  revalidatePath("/teacher");
 }
 export const saveSettingsAction = updateSettingsAction;
 export const saveSettings = updateSettingsAction;
@@ -344,3 +345,40 @@ export async function deleteStudentAndRedirectAction(f: FormData) {
   await deleteStudentAction(f);
   redirect("/principal");
 }
+
+// ---- Auth: Profile Sync on Registration ----
+export async function registerProfileSyncAction(payload: {
+  userId?: string;
+  email: string;
+  role: "student" | "teacher";
+  full_name: string;
+  roll_number?: string | null;
+  class_name?: string | null;
+  subject?: string | null;
+}) {
+  const admin = createAdmin();
+  let uid = payload.userId;
+  if (!uid) {
+    try {
+      const { data: usersData } = await admin.auth.admin.listUsers();
+      const found = usersData?.users?.find(
+        (u) => u.email?.toLowerCase() === payload.email.toLowerCase()
+      );
+      uid = found?.id;
+    } catch {}
+  }
+  if (!uid) return { success: false };
+
+  const isTeacher = payload.role === "teacher";
+  const { error } = await admin.from("profiles").upsert({
+    id: uid,
+    full_name: payload.full_name,
+    email: payload.email,
+    role: payload.role,
+    roll_number: isTeacher ? null : (payload.roll_number || null),
+    class_name: isTeacher ? (payload.subject || null) : (payload.class_name || null),
+  });
+
+  return { success: !error };
+}
+

@@ -26,7 +26,7 @@ create table school_settings (
   id uuid primary key default gen_random_uuid(),
   youtube_url text, whatsapp_number text, contact_email text);
 insert into school_settings (youtube_url, whatsapp_number, contact_email)
-values ('https://youtube.com/@SchoolChannel', '+923001234567', 'info@school.com');
+values ('https://youtube.com/@niazirehnuma', '+92 348 6868167', 'niaziacademies@gmail.com');
 
 -- helpers (security definer avoids recursive RLS)
 create function my_role() returns user_role language sql stable security definer set search_path=public
@@ -34,12 +34,29 @@ as $$ select role from profiles where id = auth.uid() $$;
 create function my_class() returns text language sql stable security definer set search_path=public
 as $$ select class_name from profiles where id = auth.uid() $$;
 
--- every sign-up becomes a STUDENT; roles are never taken from client metadata
-create function handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$
+-- sign-up role handler: supports teacher & student self-registration
+create or replace function handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$
+declare
+  user_role user_role := 'student';
 begin
+  if (new.raw_user_meta_data->>'role') in ('teacher', 'student') then
+    user_role := (new.raw_user_meta_data->>'role')::user_role;
+  end if;
+
   insert into profiles (id, full_name, roll_number, class_name, email, role)
-  values (new.id, coalesce(new.raw_user_meta_data->>'full_name',''),
-          new.raw_user_meta_data->>'roll_number', new.raw_user_meta_data->>'class_name', new.email, 'student');
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name',''),
+    case when user_role = 'teacher' then null else new.raw_user_meta_data->>'roll_number' end,
+    case when user_role = 'teacher' then coalesce(new.raw_user_meta_data->>'subject', null) else new.raw_user_meta_data->>'class_name' end,
+    new.email,
+    user_role
+  )
+  on conflict (id) do update set
+    full_name = excluded.full_name,
+    role = excluded.role,
+    class_name = excluded.class_name,
+    roll_number = excluded.roll_number;
   return new;
 end $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute function handle_new_user();

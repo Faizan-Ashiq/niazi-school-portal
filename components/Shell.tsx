@@ -80,9 +80,39 @@ export default function Shell({ title, name, role, children }: ShellProps) {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-200/70 bg-white/70 py-5 text-center text-xs text-slate-500">
-        <p className="font-semibold text-slate-600">NIAZI REHNUMA</p>
-        <p className="text-slate-400 mt-0.5">25 Years of Academic Excellence · © {new Date().getFullYear()} All rights reserved.</p>
+      <footer className="mt-auto border-t border-slate-200/80 bg-white/80 backdrop-blur-sm py-6 text-xs text-slate-500">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div>
+            <p className="font-semibold text-slate-700">NIAZI REHNUMA</p>
+            <p className="text-slate-400 text-[11px] mt-0.5">25 Years of Academic Excellence · © {new Date().getFullYear()} All rights reserved.</p>
+          </div>
+          <div className="flex items-center flex-wrap justify-center gap-4 text-xs font-medium text-slate-600">
+            <a
+              href="https://youtube.com/@niazirehnuma"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-red-600 transition"
+            >
+              YouTube
+            </a>
+            <span>•</span>
+            <a
+              href="https://wa.me/923486868167"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-emerald-600 transition"
+            >
+              WhatsApp (+92 348 6868167)
+            </a>
+            <span>•</span>
+            <a
+              href="mailto:niaziacademies@gmail.com"
+              className="hover:text-indigo-600 transition"
+            >
+              niaziacademies@gmail.com
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   );
